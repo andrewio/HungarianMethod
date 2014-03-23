@@ -22,6 +22,13 @@ namespace HungarianMethod
                                  { 6, 2, 12, 3, 6 },
                                  { 4, 7, 11, 1, 9 }
                                  };
+        //private int[,] priceMatrix = { 
+        //                         { 8, 4, 5, 7 ,2 },
+        //                         { 7, 4, 3, 8, 2 },
+        //                         { 1, 2, 4, 7, 2 },
+        //                         { 3, 9, 9, 2, 5 },
+        //                         { 4, 5, 1, 6, 3 }
+        //                         };
 
         public Form1()
         {
@@ -42,7 +49,17 @@ namespace HungarianMethod
 
             //Ищем минимальный элемент в столбце и 
             //отнимаем от каждого элемента столбца
-            DeductMinFromColumn();
+            if (radioButton1.Checked)
+            {
+                DeductMinFromColumn();
+            }
+            else if (radioButton2.Checked)
+            {
+                DeductMaxFromColumn();
+            }
+
+
+            
      
             DGVToConsole(dataGridView1);
 
@@ -58,20 +75,21 @@ namespace HungarianMethod
 
             List<int> zeroStarColumnIndexes = new List<int>();
             List<int> zeroDashRowIndexes = new List<int>();
-            int zeroStarCount = SetAndCountZeroStar(zeroStarColumnIndexes);
+            int zeroStarCount = SetZeroStar();
             Console.WriteLine("CountZeroStar: {0}",zeroStarCount);
             DGVToConsole(dataGridView1);
 
             while (zeroStarCount < matrixSize)
             {
                 //выделяем как + стобцы со 0*(их индексы в zeroStarColumnIndexes)
-
+                selectZeroStarColumns(zeroStarColumnIndexes,dataGridView1);
+                
                 bool isStarZeroInRowOfZero = true;
 
                 while (isStarZeroInRowOfZero == true)
                 {
                     bool isZeroInUnselectedItems = true;
-
+                    bool isLChain = false;
                     //Среди невыделенных элементов есть 0?
                     while (isZeroInUnselectedItems == true)
                     {
@@ -113,16 +131,16 @@ namespace HungarianMethod
 
                             bool isStarZero = true;
                             bool isDashZero = true;
-
+                            Point dashZeroInLChain = zeroPos;
                             while (isStarZero && isDashZero)
                             {
-
+                                
                                 Point starZeroInLChain = new Point();
-                                isStarZero = FindStarZeroInColumnOfDashZero(zeroPos, ref starZeroInLChain);
+                                isStarZero = FindStarZeroInColumnOfDashZero(dashZeroInLChain, ref starZeroInLChain);
 
                                 if (isStarZero == true)
                                 {
-                                    Point dashZeroInLChain = new Point();
+                                    
                                     isDashZero = FindDashZeroInRowOfStarZero(starZeroInLChain, ref dashZeroInLChain);
 
                                     if (isDashZero == true)
@@ -145,7 +163,7 @@ namespace HungarianMethod
                             }
                             //на выходе из цикла получаем L-цепь
 
-                            //Затем заменяем в ней все 0* на 0, а 0’ на 0*.Снимаем все выделения.
+                            //Затем заменяем в ней все 0* на 0, а 0’ на 0*. Снимаем все выделения.
                             foreach (Point pos in LChain)
                             {
                                 if (Convert.ToString(dataGridView1[pos.X, pos.Y].Value) == "0*")
@@ -154,26 +172,32 @@ namespace HungarianMethod
                                 }
                                 if (Convert.ToString(dataGridView1[pos.X, pos.Y].Value) == "0'")
                                 {
-                                    dataGridView1[pos.X, pos.Y].Value = "0'";
+                                    dataGridView1[pos.X, pos.Y].Value = "0*";
                                 }
                             }
 
+                            DGVToConsole(dataGridView1);
+
                             //Снимаем все выделения
+                            clearDashZeros(dataGridView1);
+                            DGVToConsole(dataGridView1);
+
                             zeroStarColumnIndexes.Clear();
                             zeroDashRowIndexes.Clear();
                             zeroStarCount++;
                             isZeroInUnselectedItems = false;
-                            //isStarZeroInRowOfZero = false;
+                            isStarZeroInRowOfZero = false;
+                            isLChain = true;
                         }
 
 
                     }
 
-                    if (isZeroInUnselectedItems == false)
+                    if (isZeroInUnselectedItems == false && isLChain == false)
                     {
                         //Находим минимальный элемент h > 0 среди не выделенных элементов
                         int minH = FindMinHInUnselectedItems(zeroStarColumnIndexes, zeroDashRowIndexes);
-                        Console.WriteLine("minH = 2 \n");
+                        Console.WriteLine("minH = {0} \n", minH);
                         PrintSeparator();
                         //вычитаем h из невыделенных столцов
                         DeductHFromUnselectedColumns(minH, zeroStarColumnIndexes, zeroDashRowIndexes);
@@ -182,28 +206,74 @@ namespace HungarianMethod
                         PlusHToSelectedRows(minH, zeroStarColumnIndexes, zeroDashRowIndexes);
                         DGVToConsole(dataGridView1);
                     }
-                    else
-                    {
-
-                    }
 
                 }
 
-
-
-
-
             }
 
-
-
             //Записать матрицу X
+            int FXOpt = DisplayEndPriceMatrixFrom(dataGridView1);
 
-            //SetMatrixToDataGridView(dataGridView2, priceMatrix);
+            SetMatrixToDataGridView(dataGridView1, priceMatrix);
 
             //Посчитать F(Xopt)
+            textBoxFXOpt.Text = FXOpt.ToString();
+
+        }
+
+        private int DisplayEndPriceMatrixFrom(DataGridView dgv)
+        {
+            int FXOpt = 0;
+            for (int i = 0; i < dgv.ColumnCount; i++)
+            {
+                for (int j = 0; j < dgv.RowCount; j++)
+                {
+                    if (dgv[i, j].Value.ToString() == "0*")
+                    {
+
+                        dataGridView2[i, j].Value = 1;
+                        FXOpt += priceMatrix[j,i];
+                    }
+                    else
+                    {
+                        dataGridView2[i, j].Value = 0;
+                    }
+                }
+            }
+
+            return FXOpt;
+        }
+
+        private void selectZeroStarColumns(List<int> zeroStarColumnIndexes, DataGridView dgv)
+        {
+            for (int i = 0; i < dgv.ColumnCount; i++)
+            {
+                for (int j = 0; j < dgv.RowCount; j++)
+                {
+                    if (dgv[i,j].Value.ToString() == "0*")
+                    {
 
 
+                        if (!zeroStarColumnIndexes.Contains(i))
+                        {
+                            zeroStarColumnIndexes.Add(i);
+                            break;
+                        }
+                    }
+                }
+            }
+
+        }
+
+        private void clearDashZeros(DataGridView dgv)
+        {
+            for (int i = 0; i < dgv.ColumnCount; i++)
+            {
+                for (int j = 0; j < dgv.RowCount; j++)
+                {
+                    dgv[i, j].Value = dgv[i, j].Value.ToString().Replace("'", string.Empty);
+                }
+            }
         }
 
         private void DGVToConsole(DataGridView dgv)
@@ -444,7 +514,7 @@ namespace HungarianMethod
         {
             Console.WriteLine("--------------");
         }
-        private int SetAndCountZeroStar(List<int> zeroStarColumnIndexes)
+        private int SetZeroStar()
         {
             Console.WriteLine("SetAndCountZeroStar");
             int zeroStarCount = 0;
@@ -475,10 +545,7 @@ namespace HungarianMethod
                         {
                             dataGridView1[i, j].Value = "0*";
                             zeroStarCount++;
-                            if (!zeroStarColumnIndexes.Contains(i))
-                            {
-                                zeroStarColumnIndexes.Add(i);
-                            }
+                            
                             break;
                             
                         }
@@ -502,6 +569,25 @@ namespace HungarianMethod
 
                     dataGridView1[i, j].Value =
                         Convert.ToInt32(dataGridView1[i, j].Value) - min;
+                }
+            }
+            Console.WriteLine();
+            PrintSeparator();
+
+        }
+
+        private void DeductMaxFromColumn()
+        {
+            Console.WriteLine("DeductMinFromColumn");
+            for (int i = 0; i < dataGridView1.ColumnCount; i++)
+            {
+                int max = this.dataGridView1.Rows.Cast<DataGridViewRow>().Max(r => Convert.ToInt32(r.Cells[i].Value));
+                Console.Write(max + "\t");
+                for (int j = 0; j < dataGridView1.RowCount; j++)
+                {
+
+                    dataGridView1[i, j].Value =
+                        max - Convert.ToInt32(dataGridView1[i, j].Value);
                 }
             }
             Console.WriteLine();
