@@ -86,6 +86,7 @@
             this.textBoxFXOpt.Name = "textBoxFXOpt";
             this.textBoxFXOpt.Size = new System.Drawing.Size(130, 72);
             this.textBoxFXOpt.TabIndex = 3;
+            this.textBoxFXOpt.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             // 
             // label1
             // 

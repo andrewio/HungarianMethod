@@ -44,37 +44,47 @@ namespace HungarianMethod
 
         private void button1_Click(object sender, EventArgs e)
         {
-            HungSolving();
+            //Выбор типа задачи
+            string taskType = string.Empty;
+            if (radioButton1.Checked)
+            {
+                taskType = "min";
+            }
+            else if (radioButton2.Checked)
+            {
+                taskType = "max";
+            }
+
+            HungSolving(priceMatrix, taskType);
 
         }
 
-        private void HungSolving()
+        private void HungSolving( int[,] priceMatrix, string taskType)
         {
             
+            //Перевод для удобства работы
+            string[,] workingMatrix = IntArrayToStringArray(priceMatrix);
 
             //Решение венгерским методом и заполнение второй таблицы
 
             //Ищем минимальный элемент в столбце и 
             //отнимаем от каждого элемента столбца
-            if (radioButton1.Checked)
+            if (taskType == "min")
             {
-                DeductMinFromColumn();
+                DeductMinFromColumn(workingMatrix);
             }
-            else if (radioButton2.Checked)
+            else if (taskType == "max")
             {
-                DeductMaxFromColumn();
+                DeductMaxFromColumn(workingMatrix);
             }
-
-
-            
-     
-            DGVToConsole(dataGridView1);
+   
+            String2DArrayToConsole(workingMatrix);
 
             //Ищем минимальный элемент в строке и 
             //отнимаем от каждого элемента строки
-            DeductMinFromRow();
+            DeductMinFromRow(workingMatrix);
 
-            DGVToConsole(dataGridView1);
+            String2DArrayToConsole(workingMatrix);
 
             //Просматриваем стобцы матрицы  в поисках нуля
             //Если в одной строке с найденным нулем нет 0*,
@@ -82,14 +92,14 @@ namespace HungarianMethod
 
             List<int> zeroStarColumnIndexes = new List<int>();
             List<int> zeroDashRowIndexes = new List<int>();
-            int zeroStarCount = SetZeroStar();
-            Console.WriteLine("CountZeroStar: {0}",zeroStarCount);
-            DGVToConsole(dataGridView1);
+            int zeroStarCount = SetZeroStar(workingMatrix);
+            Console.WriteLine("CountZeroStar: {0}", zeroStarCount);
+            String2DArrayToConsole(workingMatrix);
 
             while (zeroStarCount < matrixSize)
             {
                 //выделяем как + стобцы со 0*(их индексы в zeroStarColumnIndexes)
-                selectZeroStarColumns(zeroStarColumnIndexes,dataGridView1);
+                selectZeroStarColumns(zeroStarColumnIndexes, workingMatrix);
                 
                 bool isStarZeroInRowOfZero = true;
 
@@ -103,17 +113,17 @@ namespace HungarianMethod
 
                         Point zeroPos = new Point();
                         isZeroInUnselectedItems =
-                            FindZeroInUnselectedItems(zeroStarColumnIndexes, zeroDashRowIndexes, ref zeroPos);
+                            FindZeroInUnselectedItems(workingMatrix, zeroStarColumnIndexes, zeroDashRowIndexes, ref zeroPos);
                         if (isZeroInUnselectedItems == false)
                         {
                             break;
                         }
                         //отмечаем этот 0 как 0'
-                        dataGridView1[zeroPos.X, zeroPos.Y].Value = "0'";
-                        DGVToConsole(dataGridView1);
+                        workingMatrix[zeroPos.Y, zeroPos.X] = "0'";
+                        String2DArrayToConsole(workingMatrix);
 
                         Point starZeroPos = new Point();
-                        isStarZeroInRowOfZero = FindStarZeroInRowOfZero(zeroPos, ref starZeroPos);
+                        isStarZeroInRowOfZero = FindStarZeroInRowOfZero(workingMatrix, zeroPos, ref starZeroPos);
 
                         //В одной строке с этим 0 есть 0*
                         if (isStarZeroInRowOfZero == true)
@@ -143,12 +153,12 @@ namespace HungarianMethod
                             {
                                 
                                 Point starZeroInLChain = new Point();
-                                isStarZero = FindStarZeroInColumnOfDashZero(dashZeroInLChain, ref starZeroInLChain);
+                                isStarZero = FindStarZeroInColumnOfDashZero(workingMatrix, dashZeroInLChain, ref starZeroInLChain);
 
                                 if (isStarZero == true)
                                 {
                                     
-                                    isDashZero = FindDashZeroInRowOfStarZero(starZeroInLChain, ref dashZeroInLChain);
+                                    isDashZero = FindDashZeroInRowOfStarZero(workingMatrix, starZeroInLChain, ref dashZeroInLChain);
 
                                     if (isDashZero == true)
                                     {
@@ -173,21 +183,21 @@ namespace HungarianMethod
                             //Затем заменяем в ней все 0* на 0, а 0’ на 0*. Снимаем все выделения.
                             foreach (Point pos in LChain)
                             {
-                                if (Convert.ToString(dataGridView1[pos.X, pos.Y].Value) == "0*")
+                                if (workingMatrix[pos.Y, pos.X] == "0*")
                                 {
-                                    dataGridView1[pos.X, pos.Y].Value = 0;
+                                    workingMatrix[pos.Y, pos.X] = "0";
                                 }
-                                if (Convert.ToString(dataGridView1[pos.X, pos.Y].Value) == "0'")
+                                if (workingMatrix[pos.Y, pos.X] == "0'")
                                 {
-                                    dataGridView1[pos.X, pos.Y].Value = "0*";
+                                    workingMatrix[pos.Y, pos.X] = "0*";
                                 }
                             }
 
-                            DGVToConsole(dataGridView1);
+                            String2DArrayToConsole(workingMatrix);
 
                             //Снимаем все выделения
-                            clearDashZeros(dataGridView1);
-                            DGVToConsole(dataGridView1);
+                            clearDashZeros(workingMatrix);
+                            String2DArrayToConsole(workingMatrix);
 
                             zeroStarColumnIndexes.Clear();
                             zeroDashRowIndexes.Clear();
@@ -203,15 +213,15 @@ namespace HungarianMethod
                     if (isZeroInUnselectedItems == false && isLChain == false)
                     {
                         //Находим минимальный элемент h > 0 среди не выделенных элементов
-                        int minH = FindMinHInUnselectedItems(zeroStarColumnIndexes, zeroDashRowIndexes);
+                        int minH = FindMinHInUnselectedItems(workingMatrix, zeroStarColumnIndexes, zeroDashRowIndexes);
                         Console.WriteLine("minH = {0} \n", minH);
                         PrintSeparator();
                         //вычитаем h из невыделенных столцов
-                        DeductHFromUnselectedColumns(minH, zeroStarColumnIndexes, zeroDashRowIndexes);
-                        DGVToConsole(dataGridView1);
+                        DeductHFromUnselectedColumns(workingMatrix, minH, zeroStarColumnIndexes, zeroDashRowIndexes);
+                        String2DArrayToConsole(workingMatrix);
                         //добавляем h к выделенным строкам
-                        PlusHToSelectedRows(minH, zeroStarColumnIndexes, zeroDashRowIndexes);
-                        DGVToConsole(dataGridView1);
+                        PlusHToSelectedRows(workingMatrix, minH, zeroStarColumnIndexes, zeroDashRowIndexes);
+                        String2DArrayToConsole(workingMatrix);
                     }
 
                 }
@@ -219,31 +229,46 @@ namespace HungarianMethod
             }
 
             //Записать матрицу X
-            int FXOpt = DisplayEndPriceMatrixFrom(dataGridView1);
-
-            SetMatrixToDataGridView(dataGridView1, priceMatrix);
+            int FXOpt = DisplayEndPriceMatrixFromTo(workingMatrix, dataGridView2, priceMatrix);
 
             //Посчитать F(Xopt)
             textBoxFXOpt.Text = FXOpt.ToString();
 
         }
 
-        private int DisplayEndPriceMatrixFrom(DataGridView dgv)
+        private string[,] IntArrayToStringArray(int[,] priceMatrix)
+        {
+            string[,] goalMatrix = new string[5,5];
+
+            for (int i = 0; i < priceMatrix.GetLength(0); i++)
+            {
+                for (int j = 0; j < priceMatrix.GetLength(0); j++)
+                {
+                    goalMatrix[i, j] = priceMatrix[i, j].ToString();
+                }
+            }
+
+            return goalMatrix;
+        }
+
+        private int DisplayEndPriceMatrixFromTo(string[,] goalMatrix,
+                                                DataGridView dgv, 
+                                                int[,] priceMatrix)
         {
             int FXOpt = 0;
-            for (int i = 0; i < dgv.ColumnCount; i++)
+            for (int i = 0; i < goalMatrix.GetLength(0); i++)
             {
-                for (int j = 0; j < dgv.RowCount; j++)
+                for (int j = 0; j < goalMatrix.GetLength(0); j++)
                 {
-                    if (dgv[i, j].Value.ToString() == "0*")
+                    if (goalMatrix[j, i] == "0*")
                     {
 
-                        dataGridView2[i, j].Value = 1;
+                        dgv[i, j].Value = 1;
                         FXOpt += priceMatrix[j,i];
                     }
                     else
                     {
-                        dataGridView2[i, j].Value = 0;
+                        dgv[i, j].Value = 0;
                     }
                 }
             }
@@ -251,13 +276,13 @@ namespace HungarianMethod
             return FXOpt;
         }
 
-        private void selectZeroStarColumns(List<int> zeroStarColumnIndexes, DataGridView dgv)
+        private void selectZeroStarColumns(List<int> zeroStarColumnIndexes, string[,] goalMatrix)
         {
-            for (int i = 0; i < dgv.ColumnCount; i++)
+            for (int i = 0; i < goalMatrix.GetLength(0); i++)
             {
-                for (int j = 0; j < dgv.RowCount; j++)
+                for (int j = 0; j < goalMatrix.GetLength(0); j++)
                 {
-                    if (dgv[i,j].Value.ToString() == "0*")
+                    if (goalMatrix[j, i] == "0*")
                     {
 
 
@@ -272,26 +297,25 @@ namespace HungarianMethod
 
         }
 
-        private void clearDashZeros(DataGridView dgv)
+        private void clearDashZeros(string[,] goalMatrix)
         {
-            for (int i = 0; i < dgv.ColumnCount; i++)
+            for (int i = 0; i < goalMatrix.GetLength(0); i++)
             {
-                for (int j = 0; j < dgv.RowCount; j++)
+                for (int j = 0; j < goalMatrix.GetLength(0); j++)
                 {
-                    dgv[i, j].Value = dgv[i, j].Value.ToString().Replace("'", string.Empty);
+                    goalMatrix[j, i] = goalMatrix[j, i].Replace("'", string.Empty);
                 }
             }
         }
 
-        private void DGVToConsole(DataGridView dgv)
+        private void String2DArrayToConsole(string[,] matrix)
         {
             PrintSeparator();
-            for (int i = 0; i < dgv.RowCount; i++)
+            for (int i = 0; i < matrix.GetLength(0); i++)
             {
-                for (int j = 0; j < dgv.ColumnCount; j++)
+                for (int j = 0; j < matrix.GetLength(0); j++)
                 {
-                    Console.Write(dgv[j, i].Value  + "\t");
-                    
+                    Console.Write(matrix[i, j] + "\t");                    
                 }
                 Console.WriteLine();
                 
@@ -311,11 +335,11 @@ namespace HungarianMethod
             }
         }
 
-        private bool FindDashZeroInRowOfStarZero(Point starZeroInLChain, ref Point dashZeroInLChain)
+        private bool FindDashZeroInRowOfStarZero(string[,] goalMatrix, Point starZeroInLChain, ref Point dashZeroInLChain)
         {
-            for (int i = 0; i < dataGridView1.ColumnCount; i++)
+            for (int i = 0; i < goalMatrix.GetLength(0); i++)
             {
-                if (Convert.ToString(dataGridView1[i, starZeroInLChain.Y].Value) == "0'")
+                if (goalMatrix[starZeroInLChain.Y, i] == "0'")
                 {
                     dashZeroInLChain = new Point(i, starZeroInLChain.Y);
                     return true;
@@ -324,11 +348,11 @@ namespace HungarianMethod
             return false;
         }
 
-        private bool FindStarZeroInColumnOfDashZero(Point zeroPos, ref Point starZero )
+        private bool FindStarZeroInColumnOfDashZero(string[,] goalMatrix, Point zeroPos, ref Point starZero )
         {
-            for (int i = 0; i < dataGridView1.RowCount; i++)
+            for (int i = 0; i < goalMatrix.GetLength(0); i++)
             {
-                if (Convert.ToString(dataGridView1[zeroPos.X,i].Value) == "0*")
+                if (goalMatrix[i, zeroPos.X] == "0*")
                 {
                     starZero = new Point(zeroPos.X, i);
                     return true;
@@ -337,9 +361,12 @@ namespace HungarianMethod
             return false;
         }
 
-        private void PlusHToSelectedRows(int minH, List<int> zeroStarColumnIndexes, List<int> zeroDashRowIndexes)
+        private void PlusHToSelectedRows(string[,] goalMatrix,
+                                        int minH,
+                                        List<int> zeroStarColumnIndexes,
+                                        List<int> zeroDashRowIndexes)
         {
-            for (int i = 0; i < dataGridView1.RowCount; i++)
+            for (int i = 0; i < goalMatrix.GetLength(0); i++)
             {
                 //Пропускаем невыделенные строки
                 if (!zeroDashRowIndexes.Contains(i))
@@ -349,19 +376,19 @@ namespace HungarianMethod
                 else
                 {
 
-                    for (int j = 0; j < dataGridView1.ColumnCount; j++)
+                    for (int j = 0; j < goalMatrix.GetLength(0); j++)
                     {
 
-                        if (Convert.ToString(dataGridView1[j, i].Value).Contains("*"))
+                        if (goalMatrix[i, j].Contains("*"))
                             {
-                                dataGridView1[j, i].Value = (Convert.ToInt32(dataGridView1[j, i].Value.ToString().Replace("*", string.Empty)) + minH).ToString() + "*";
+                                goalMatrix[i, j] = (Convert.ToInt32(goalMatrix[i, j].Replace("*", string.Empty)) + minH).ToString() + "*";
                             }
-                        else if (Convert.ToString(dataGridView1[j, i].Value).Contains("'"))
+                        else if (goalMatrix[i, j].Contains("'"))
                             {
-                                dataGridView1[j, i].Value = (Convert.ToInt32(dataGridView1[j, i].Value.ToString().Replace("'", string.Empty)) + minH).ToString() + "'";
+                                goalMatrix[i, j] = (Convert.ToInt32(goalMatrix[i, j].Replace("'", string.Empty)) + minH).ToString() + "'";
                             }
                         else
-                            dataGridView1[j, i].Value = Convert.ToInt32(dataGridView1[j, i].Value) + minH;
+                            goalMatrix[i, j] = (Convert.ToInt32(goalMatrix[i, j]) + minH).ToString();
 
                     }
                 }
@@ -369,10 +396,12 @@ namespace HungarianMethod
             }
         }
 
-        private void DeductHFromUnselectedColumns(int minH, List<int> zeroStarColumnIndexes,
-                                              List<int> zeroDashRowIndexes)
+        private void DeductHFromUnselectedColumns(string[,] goalMatrix,
+                                                  int minH, 
+                                                  List<int> zeroStarColumnIndexes,
+                                                  List<int> zeroDashRowIndexes)
         {
-            for (int i = 0; i < dataGridView1.ColumnCount; i++)
+            for (int i = 0; i < goalMatrix.GetLength(0); i++)
             {
                 //пропускаем выделенные столбцы
                 if (zeroStarColumnIndexes.Contains(i))
@@ -382,40 +411,34 @@ namespace HungarianMethod
                 else
                 {
 
-                    for (int j = 0; j < dataGridView1.RowCount; j++)
+                    for (int j = 0; j < goalMatrix.GetLength(0); j++)
                     {
-                        //Пропускаем выделенные строки
-                        //if (zeroDashRowIndexes.Contains(j))
-                        //{
-                        //    continue;
-                        //}
-                        //else
-                        //{
-                            if (Convert.ToString(dataGridView1[i, j].Value).Contains("*"))
-                            {
-                                dataGridView1[i, j].Value = (Convert.ToInt32(dataGridView1[i, j].Value.ToString().Replace("*",string.Empty)) - minH).ToString() + "*";
-                            }
-                            else if (Convert.ToString(dataGridView1[i, j].Value).Contains("'"))
-                            {
-                                dataGridView1[i, j].Value = (Convert.ToInt32(dataGridView1[i, j].Value.ToString().Replace("'",string.Empty)) - minH).ToString() + "'";
-                            }
-                            else
-                                dataGridView1[i, j].Value = Convert.ToInt32(dataGridView1[i, j].Value) - minH;
+                        
+                        if (goalMatrix[j, i].Contains("*"))
+                        {
+                            goalMatrix[j, i] = (Convert.ToInt32(goalMatrix[j, i].Replace("*", string.Empty)) - minH).ToString() + "*";
+                        }
+                        else if (goalMatrix[j, i].Contains("'"))
+                        {
+                            goalMatrix[j, i] = (Convert.ToInt32(goalMatrix[j, i].Replace("'", string.Empty)) - minH).ToString() + "'";
+                        }
+                        else
+                            goalMatrix[j, i] = (Convert.ToInt32(goalMatrix[j, i]) - minH).ToString();
 
-                        //}
                     }
                 }
             }
         }
 
-        private int FindMinHInUnselectedItems(List<int> zeroStarColumnIndexes,
+        private int FindMinHInUnselectedItems(string[,] goalMatrix,
+                                              List<int> zeroStarColumnIndexes,
                                               List<int> zeroDashRowIndexes)
         {
             //Первый из невыделенных элементов
-            int minH = 0;//= Convert.ToInt32(dataGridView1[zeroStarColumnIndexes[0], zeroDashRowIndexes[0]].Value);
+            int minH = 0;
 
             bool firstElem = true;
-            for (int i = 0; i < dataGridView1.ColumnCount; i++)
+            for (int i = 0; i < goalMatrix.GetLength(0); i++)
             {
                 //пропускаем выделенные столбцы
                 if (zeroStarColumnIndexes.Contains(i))
@@ -425,7 +448,7 @@ namespace HungarianMethod
                 else
                 {
 
-                    for (int j = 0; j < dataGridView1.RowCount; j++)
+                    for (int j = 0; j < goalMatrix.GetLength(0); j++)
                     {
                         //Пропускаем выделенные строки
                         if (zeroDashRowIndexes.Contains(j))
@@ -434,18 +457,18 @@ namespace HungarianMethod
                         }
                         else
                         {
-                            if (Convert.ToInt32(dataGridView1[i, j].Value) > 0)
+                            if (Convert.ToInt32(goalMatrix[j, i]) > 0)
                             {
                                 if (firstElem == true)
                                 {
                               
-                                        minH = Convert.ToInt32(dataGridView1[i, j].Value);
-                                        firstElem = false;
+                                    minH = Convert.ToInt32(goalMatrix[j, i]);
+                                    firstElem = false;
                                 
                                 }
-                                else if (Convert.ToInt32(dataGridView1[i, j].Value) < minH)
+                                else if (Convert.ToInt32(goalMatrix[j, i]) < minH)
                                 {
-                                        minH = Convert.ToInt32(dataGridView1[i, j].Value);
+                                    minH = Convert.ToInt32(goalMatrix[j, i]);
 
                                 }
                             }
@@ -459,12 +482,12 @@ namespace HungarianMethod
             return minH;
         }
 
-        private bool FindStarZeroInRowOfZero(Point zeroPos, ref Point starZeroPos)
+        private bool FindStarZeroInRowOfZero(string[,] goalMatrix, Point zeroPos, ref Point starZeroPos)
         {
-            for (int m = 0; m < dataGridView1.ColumnCount; m++)
+            for (int m = 0; m < goalMatrix.GetLength(0); m++)
             {
                 //В одной строке с этим нулем есть 0* ?
-                if (Convert.ToString(dataGridView1[m, zeroPos.Y].Value) == "0*")
+                if (goalMatrix[zeroPos.Y, m] == "0*")
                 {
                     starZeroPos = new Point(m, zeroPos.Y);
                     return true;
@@ -474,7 +497,8 @@ namespace HungarianMethod
             return false;
         }
 
-        private bool FindZeroInUnselectedItems(List<int> zeroStarColumnIndexes, 
+        private bool FindZeroInUnselectedItems(string[,] goalMatrix,
+                                               List<int> zeroStarColumnIndexes, 
                                                List<int> zeroDashRowIndexes, 
                                                ref Point zeroPos)
         {
@@ -483,7 +507,7 @@ namespace HungarianMethod
             //среди невыделенных элементов есть 0?
             //-------------------------------------
 
-            for (int i = 0; i < dataGridView1.ColumnCount; i++)
+            for (int i = 0; i < goalMatrix.GetLength(0); i++)
             {
                 //пропускаем выделенные столбцы
                 if (zeroStarColumnIndexes.Contains(i))
@@ -493,7 +517,7 @@ namespace HungarianMethod
                 else
                 {
 
-                    for (int j = 0; j < dataGridView1.RowCount; j++)
+                    for (int j = 0; j < goalMatrix.GetLength(0); j++)
                     {
                         //Пропускаем выделенные строки
                         if (zeroDashRowIndexes.Contains(j))
@@ -503,7 +527,7 @@ namespace HungarianMethod
                         else
                         {
                             //среди невыделенных элементов есть 0?
-                            if (Convert.ToString(dataGridView1[i, j].Value) == "0")
+                            if (goalMatrix[j, i] == "0")
                             {
                                 zeroPos = new Point(i, j);
                                 return true;
@@ -521,24 +545,24 @@ namespace HungarianMethod
         {
             Console.WriteLine("--------------");
         }
-        private int SetZeroStar()
+        private int SetZeroStar(string[,] goalMatrix)
         {
             Console.WriteLine("SetAndCountZeroStar");
             int zeroStarCount = 0;
-            for (int i = 0; i < dataGridView1.ColumnCount; i++)
+            for (int i = 0; i < goalMatrix.GetLength(0); i++)
             {
-                //DGVToConsole(dataGridView1);
-                for (int j = 0; j < dataGridView1.RowCount; j++)
+                
+                for (int j = 0; j < goalMatrix.GetLength(0); j++)
                 {
                     
                     //Просматриваем столбцы в поисках 0
-                    if (Convert.ToString(dataGridView1[i, j].Value) == "0")
+                    if (goalMatrix[j, i] == "0")
                     {
                         bool isZeroStar = false;
                         //Просматриваем строку с 0 на 0*
-                        for (int m = 0; m < dataGridView1.ColumnCount; m++)
+                        for (int m = 0; m < goalMatrix.GetLength(0); m++)
                         {
-                            if (Convert.ToString(dataGridView1[m, j].Value) == "0*")
+                            if (goalMatrix[j, m] == "0*")
                             {
                                 //0* есть в одной строке с 0 
                                 isZeroStar = true;
@@ -550,7 +574,7 @@ namespace HungarianMethod
                         //Если 0* не найден, отмечаем найденный 0 как 0*
                         if (isZeroStar == false)
                         {
-                            dataGridView1[i, j].Value = "0*";
+                            goalMatrix[j, i] = "0*";
                             zeroStarCount++;
                             
                             break;
@@ -564,18 +588,26 @@ namespace HungarianMethod
             return zeroStarCount;
         }
 
-        private void DeductMinFromColumn()
+        private void DeductMinFromColumn(string[,] goalMatrix)
         {
             Console.WriteLine("DeductMinFromColumn");
-            for (int i = 0; i < dataGridView1.ColumnCount; i++)
+            for (int i = 0; i < goalMatrix.GetLength(0); i++)
             {
-                int min = this.dataGridView1.Rows.Cast<DataGridViewRow>().Min(r => Convert.ToInt32(r.Cells[i].Value));
+                int min = Convert.ToInt32(goalMatrix[0, i]);
+
+                for (int k = 0; k < goalMatrix.GetLength(0); k++)
+                {
+                    if (Convert.ToInt32(goalMatrix[k, i]) < min)
+                    {
+                        min = Convert.ToInt32(goalMatrix[k, i]);
+                    }
+                }
                 Console.Write(min + "\t");
-                for (int j = 0; j < dataGridView1.RowCount; j++)
+                for (int j = 0; j < goalMatrix.GetLength(0); j++)
                 {
 
-                    dataGridView1[i, j].Value =
-                        Convert.ToInt32(dataGridView1[i, j].Value) - min;
+                    goalMatrix[j, i] =
+                        (Convert.ToInt32(goalMatrix[j, i]) - min).ToString();
                 }
             }
             Console.WriteLine();
@@ -583,18 +615,27 @@ namespace HungarianMethod
 
         }
 
-        private void DeductMaxFromColumn()
+        private void DeductMaxFromColumn(string[,] goalMatrix)
         {
             Console.WriteLine("DeductMinFromColumn");
-            for (int i = 0; i < dataGridView1.ColumnCount; i++)
+            for (int i = 0; i < goalMatrix.GetLength(0); i++)
             {
-                int max = this.dataGridView1.Rows.Cast<DataGridViewRow>().Max(r => Convert.ToInt32(r.Cells[i].Value));
+                int max = Convert.ToInt32(goalMatrix[0, i]);
+
+                for (int k = 0; k < goalMatrix.GetLength(0); k++)
+                {
+                    if (Convert.ToInt32(goalMatrix[k, i]) > max)
+                    {
+                        max = Convert.ToInt32(goalMatrix[k, i]);
+                    }
+                }
+                
                 Console.Write(max + "\t");
-                for (int j = 0; j < dataGridView1.RowCount; j++)
+                for (int j = 0; j < goalMatrix.GetLength(0); j++)
                 {
 
-                    dataGridView1[i, j].Value =
-                        max - Convert.ToInt32(dataGridView1[i, j].Value);
+                    goalMatrix[j, i] =
+                        (max - Convert.ToInt32(goalMatrix[j, i])).ToString();
                 }
             }
             Console.WriteLine();
@@ -602,28 +643,28 @@ namespace HungarianMethod
 
         }
 
-        private void DeductMinFromRow()
+        private void DeductMinFromRow(string[,] goalMatrix)
         {
             PrintSeparator();
             Console.WriteLine("DeductMinFromRow");
-            for (int i = 0; i < dataGridView1.RowCount; i++)
+            for (int i = 0; i < goalMatrix.GetLength(0); i++)
             {
-                int min = Convert.ToInt32(dataGridView1[0, i].Value);
-                for (int j = 0; j < dataGridView1.ColumnCount; j++)
+                int min = Convert.ToInt32(goalMatrix[i,0]);
+                for (int j = 0; j < goalMatrix.GetLength(0); j++)
                 {
-                    if (min > Convert.ToInt32(dataGridView1[j, i].Value))
+                    if (min > Convert.ToInt32(goalMatrix[i,j]))
                     {
-                        min = Convert.ToInt32(dataGridView1[j, i].Value);
+                        min = Convert.ToInt32(goalMatrix[i,j]);
                     }
 
                 }
                 Console.Write(min + "\t");
 
-                for (int j = 0; j < dataGridView1.ColumnCount; j++)
+                for (int j = 0; j < goalMatrix.GetLength(0); j++)
                 {
 
-                    dataGridView1[j, i].Value =
-                        Convert.ToInt32(dataGridView1[j, i].Value) - min;
+                    goalMatrix[i, j] = 
+                        (Convert.ToInt32(goalMatrix[i, j]) - min).ToString();
                 }
             }
             Console.WriteLine();
@@ -636,8 +677,6 @@ namespace HungarianMethod
             dataGridView2.RowCount = dataGridView2.ColumnCount = this.matrixSize;
 
             SetMatrixToDataGridView(dataGridView1, this.priceMatrix);
-
-            DGVToConsole(dataGridView1);
 
         }
     }
