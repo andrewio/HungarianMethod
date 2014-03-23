@@ -80,6 +80,7 @@
             // 
             // textBoxFXOpt
             // 
+            this.textBoxFXOpt.Font = new System.Drawing.Font("Microsoft Sans Serif", 20F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
             this.textBoxFXOpt.Location = new System.Drawing.Point(435, 253);
             this.textBoxFXOpt.Multiline = true;
             this.textBoxFXOpt.Name = "textBoxFXOpt";
@@ -142,7 +143,7 @@
             this.Controls.Add(this.button1);
             this.Controls.Add(this.dataGridView1);
             this.Name = "Form1";
-            this.Text = "HungarianAlgorithm";
+            this.Text = "Hungarian Algorithm. Sirota Andrew";
             this.Load += new System.EventHandler(this.Form1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView2)).EndInit();
